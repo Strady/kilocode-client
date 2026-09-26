@@ -48,21 +48,26 @@ pyproject.toml
 
 ## Required checks
 
-Always run both before finishing any code change:
+Always run these before finishing any code change:
 
 ```
-.venv/bin/python -m mypy kilocode_client/
+.venv/bin/ruff check .
+.venv/bin/ty check
 .venv/bin/python -m pytest -q
 ```
 
-- Mypy runs with `strict = true` and `warn_unused_ignores = true` (see `pyproject.toml`).
+- **ruff**: linter + formatter. Config in `pyproject.toml` (`[tool.ruff]`), `line-length = 100`,
+  selected rules under `[tool.ruff.lint]` (pycodestyle, pyflakes, isort, pyupgrade, bugbear).
+  To auto-fix: `.venv/bin/ruff check . --fix`.
+- **ty**: the project's type checker (Astral's Rust checker). It reads `requires-python`
+  from `pyproject.toml` and checks the project root by default.
 - Tests skip integration cases automatically when no server is reachable on
   `http://127.0.0.1:4096` (see `tests/test_client_against_live_server.py`).
 
 ## Conventions
 
 - **No code comments unless asked.** Keep docstrings on public functions/methods.
-- Full type annotations everywhere; mypy strict must stay clean.
+- Full type annotations everywhere; ty must stay clean.
 - Async (`Kilo`) is the primary implementation. `SyncKilo` methods are thin
   `self._run(self._async.<method>(...))` wrappers — do not duplicate logic there.
 - Models are pydantic v2. Wire schemas come from `openapi.json`. If the schema has a
@@ -90,6 +95,8 @@ These are verified against `kilo` 7.3.46 and must be preserved:
   async def send():
       await asyncio.sleep(0.2)  # let the subscription attach
       await client.send_prompt_async(session.id, "...")
+
+
   sender = asyncio.create_task(send())
   async for event in await client.stream_session_events(session.id):
       ...
@@ -116,4 +123,4 @@ These are verified against `kilo` 7.3.46 and must be preserved:
 4. Export public names in `__init__.py.__all__` if they are meant to be public.
 5. Add a unit test (no server) and, ideally, an integration test behind the
    server-reachable guard in `tests/test_client_against_live_server.py`.
-6. Run mypy + pytest.
+6. Run ruff, ty and pytest (see Required checks).

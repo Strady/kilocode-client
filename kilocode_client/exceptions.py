@@ -8,7 +8,7 @@ hierarchy of exceptions and preserves the raw detail from the response body.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -20,12 +20,12 @@ class KiloError(Exception):
         self,
         message: str,
         *,
-        status_code: Optional[int] = None,
-        name: Optional[str] = None,
+        status_code: int | None = None,
+        name: str | None = None,
         data: Any = None,
-        method: Optional[str] = None,
-        url: Optional[str] = None,
-        request_id: Optional[str] = None,
+        method: str | None = None,
+        url: str | None = None,
+        request_id: str | None = None,
     ) -> None:
         self.status_code = status_code
         self.name = name
@@ -124,7 +124,7 @@ def raise_for_response(response: httpx.Response) -> None:
 
     message = _extract_message(body) or (response.text if response.text else f"HTTP {status}")
 
-    name: Optional[str] = None
+    name: str | None = None
     data: Any = None
     if isinstance(body, dict):
         if isinstance(body.get("name"), str):

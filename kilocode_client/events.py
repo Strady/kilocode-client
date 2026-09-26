@@ -19,8 +19,9 @@ to new event kinds added server-side, matching how the TUI consumes the stream.
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -35,16 +36,16 @@ class KiloEvent:
     """
 
     type: str
-    properties: Dict[str, Any] = field(default_factory=dict)
-    id: Optional[str] = None
-    directory: Optional[str] = None
-    project: Optional[str] = None
-    workspace: Optional[str] = None
+    properties: dict[str, Any] = field(default_factory=dict)
+    id: str | None = None
+    directory: str | None = None
+    project: str | None = None
+    workspace: str | None = None
 
     # -- convenience accessors -------------------------------------------------
 
     @property
-    def session_id(self) -> Optional[str]:
+    def session_id(self) -> str | None:
         value = self.properties.get("sessionID")
         return value if isinstance(value, str) else None
 
@@ -53,14 +54,14 @@ class KiloEvent:
         return self.type == "session.turn.close"
 
     @property
-    def turn_close_reason(self) -> Optional[str]:
+    def turn_close_reason(self) -> str | None:
         if self.type != "session.turn.close":
             return None
         reason = self.properties.get("reason")
         return reason if isinstance(reason, str) else None
 
-    def as_dict(self) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {"type": self.type, "properties": self.properties}
+    def as_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {"type": self.type, "properties": self.properties}
         if self.id is not None:
             payload["id"] = self.id
         return payload
@@ -77,7 +78,7 @@ class SessionTextDelta:
 
     __slots__ = ("session_id", "delta")
 
-    def __init__(self, session_id: Optional[str], delta: str) -> None:
+    def __init__(self, session_id: str | None, delta: str) -> None:
         self.session_id = session_id
         self.delta = delta
 
@@ -89,10 +90,10 @@ class ToolCallEvent:
 
     def __init__(
         self,
-        session_id: Optional[str],
-        call_id: Optional[str],
-        tool: Optional[str],
-        input: Dict[str, Any],
+        session_id: str | None,
+        call_id: str | None,
+        tool: str | None,
+        input: dict[str, Any],
         status: str,
     ) -> None:
         self.session_id = session_id
@@ -106,11 +107,11 @@ class ToolCallEvent:
 class PermissionRequestInfo:
     """Lightweight view of a `permission.asked` payload."""
 
-    request_id: Optional[str]
-    session_id: Optional[str]
-    permission: Optional[str]
-    patterns: List[str]
-    data: Dict[str, Any] = field(default_factory=dict)
+    request_id: str | None
+    session_id: str | None
+    permission: str | None
+    patterns: list[str]
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 def is_text_delta(event: KiloEvent) -> bool:
@@ -119,7 +120,7 @@ def is_text_delta(event: KiloEvent) -> bool:
     )
 
 
-def text_delta_of(event: KiloEvent) -> Optional[str]:
+def text_delta_of(event: KiloEvent) -> str | None:
     """Return the text fragment for a text-delta event, else ``None``."""
     if event.type == "session.next.text.delta":
         delta = event.properties.get("delta")
@@ -130,7 +131,7 @@ def text_delta_of(event: KiloEvent) -> Optional[str]:
     return None
 
 
-def tool_call_of(event: KiloEvent) -> Optional[ToolCallEvent]:
+def tool_call_of(event: KiloEvent) -> ToolCallEvent | None:
     """Return a :class:`ToolCallEvent` for tool start/end events, else ``None``."""
     status_by_type = {
         "session.next.tool.called": "running",
@@ -150,7 +151,7 @@ def tool_call_of(event: KiloEvent) -> Optional[ToolCallEvent]:
     )
 
 
-def permission_of(event: KiloEvent) -> Optional[PermissionRequestInfo]:
+def permission_of(event: KiloEvent) -> PermissionRequestInfo | None:
     """Return a :class:`PermissionRequestInfo` for a `permission.asked`, else ``None``."""
     if event.type != "permission.asked":
         return None
@@ -172,16 +173,16 @@ def permission_of(event: KiloEvent) -> Optional[PermissionRequestInfo]:
 
 @dataclass(frozen=True)
 class _RawFrame:
-    data: Optional[str]
-    event: Optional[str]
-    id: Optional[str]
+    data: str | None
+    event: str | None
+    id: str | None
 
 
 def _split_frame(frame: str) -> _RawFrame:
     """Parse a single SSE frame into its ``data``/``event``/``id`` components."""
-    data_lines: List[str] = []
-    event: Optional[str] = None
-    msg_id: Optional[str] = None
+    data_lines: list[str] = []
+    event: str | None = None
+    msg_id: str | None = None
     for line in frame.split("\n"):
         if not line or line.startswith(":"):
             continue
@@ -196,7 +197,7 @@ def _split_frame(frame: str) -> _RawFrame:
     return _RawFrame("\n".join(data_lines), event, msg_id)
 
 
-def parse_event_frame(frame: str) -> Optional[KiloEvent]:
+def parse_event_frame(frame: str) -> KiloEvent | None:
     """Parse one SSE frame into a :class:`KiloEvent`, or ``None`` for keep-alives."""
     raw = _split_frame(frame)
     if raw.data is None:
@@ -226,9 +227,9 @@ def parse_event_frame(frame: str) -> Optional[KiloEvent]:
     return None
 
 
-def parse_events(text: str) -> List[KiloEvent]:
+def parse_events(text: str) -> list[KiloEvent]:
     """Parse a chunk of SSE text (many frames) into a list of events."""
-    events: List[KiloEvent] = []
+    events: list[KiloEvent] = []
     for frame in text.split("\n\n"):
         event = parse_event_frame(frame)
         if event is not None:
@@ -254,7 +255,7 @@ class EventStream:
         self._decoder = decoder
         self._buffer = ""
 
-    def __aiter__(self) -> "EventStream":
+    def __aiter__(self) -> EventStream:
         return self
 
     async def __anext__(self) -> KiloEvent:
@@ -266,7 +267,7 @@ class EventStream:
             if event is not None:
                 return event
 
-    async def _next_frame(self) -> Optional[str]:
+    async def _next_frame(self) -> str | None:
         while "\n\n" not in self._buffer:
             try:
                 chunk = await self._aiter.__anext__()
@@ -279,7 +280,7 @@ class EventStream:
         frame, _, self._buffer = self._buffer.partition("\n\n")
         return frame
 
-    async def collect(self) -> List[KiloEvent]:
+    async def collect(self) -> list[KiloEvent]:
         """Consume the whole stream and collect all events."""
         return [event async for event in self]
 

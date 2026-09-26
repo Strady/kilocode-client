@@ -25,14 +25,14 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import os
-from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
+from collections.abc import AsyncIterator
+from typing import Any, cast
 
 import httpx
 
 from .auth import Credentials
 from .events import EventStream, KiloEvent
-from .exceptions import DecodeError, raise_for_response
+from .exceptions import raise_for_response
 from .models import (
     AgentAttachment,
     FileAttachment,
@@ -69,12 +69,12 @@ class Kilo:
     def __init__(
         self,
         base_url: str = "http://127.0.0.1:4096",
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        directory: Optional[str] = None,
-        timeout: Union[float, httpx.Timeout] = 60.0,
+        username: str | None = None,
+        password: str | None = None,
+        directory: str | None = None,
+        timeout: float | httpx.Timeout = 60.0,
         retries: int = 0,
-        headers: Optional[Dict[str, str]] = None,
+        headers: dict[str, str] | None = None,
         follow_redirects: bool = True,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -87,11 +87,13 @@ class Kilo:
         else:
             creds = Credentials(username=username, password=password)
 
-        merged_headers: Dict[str, str] = dict(headers or {})
+        merged_headers: dict[str, str] = dict(headers or {})
         if creds.header_value:
             merged_headers.setdefault("Authorization", creds.header_value)
         if directory:
-            merged_headers.setdefault("x-kilo-directory", base64.b64encode(directory.encode()).decode())
+            merged_headers.setdefault(
+                "x-kilo-directory", base64.b64encode(directory.encode()).decode()
+            )
 
         transport = httpx.AsyncHTTPTransport(retries=retries)
         self._http = httpx.AsyncClient(
@@ -112,7 +114,7 @@ class Kilo:
         """Close the underlying HTTP client."""
         await self._http.aclose()
 
-    async def __aenter__(self) -> "Kilo":
+    async def __aenter__(self) -> Kilo:
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
@@ -120,8 +122,8 @@ class Kilo:
 
     # -- low-level request helpers ---------------------------------------------
 
-    def _params(self, **extra: Any) -> Dict[str, Any]:
-        params: Dict[str, Any] = dict(extra)
+    def _params(self, **extra: Any) -> dict[str, Any]:
+        params: dict[str, Any] = dict(extra)
         if self.directory:
             params.setdefault("directory", self.directory)
         return params
@@ -131,9 +133,9 @@ class Kilo:
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         json_body: Any = None,
-        content: Optional[bytes] = None,
+        content: bytes | None = None,
         model: Any = None,
         parse: bool = True,
     ) -> Any:
@@ -158,32 +160,32 @@ class Kilo:
 
     # -- global server info ----------------------------------------------------
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> dict[str, Any]:
         """GET /global/health."""
         raw = await self._request("GET", "/global/health")
-        return cast(Dict[str, Any], raw)
+        return cast(dict[str, Any], raw)
 
-    async def list_providers(self, directory: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_providers(self, directory: str | None = None) -> list[dict[str, Any]]:
         """GET /provider -- configured providers (use ``directory`` to scope)."""
         params = {"directory": directory} if directory else {}
         raw = await self._request("GET", "/provider", params=params)
-        return cast(List[Dict[str, Any]], raw)
+        return cast(list[dict[str, Any]], raw)
 
-    async def list_models(self, directory: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_models(self, directory: str | None = None) -> list[dict[str, Any]]:
         """GET /api/model -- available models."""
         params = {"directory": directory} if directory else {}
         raw = await self._request("GET", "/api/model", params=params)
-        return cast(List[Dict[str, Any]], raw)
+        return cast(list[dict[str, Any]], raw)
 
-    async def list_agents(self) -> List[Dict[str, Any]]:
+    async def list_agents(self) -> list[dict[str, Any]]:
         """GET /agent -- available agents."""
         raw = await self._request("GET", "/agent")
-        return cast(List[Dict[str, Any]], raw)
+        return cast(list[dict[str, Any]], raw)
 
-    async def list_skills(self) -> List[Dict[str, Any]]:
+    async def list_skills(self) -> list[dict[str, Any]]:
         """GET /skill -- available skills."""
         raw = await self._request("GET", "/skill")
-        return cast(List[Dict[str, Any]], raw)
+        return cast(list[dict[str, Any]], raw)
 
     # -- session management ----------------------------------------------------
 
@@ -191,12 +193,12 @@ class Kilo:
         self,
         session_id: str,
         *,
-        parts: Optional[List[MessagePartInput]] = None,
-        message: Optional[str] = None,
+        parts: list[MessagePartInput] | None = None,
+        message: str | None = None,
         text: str = "",
-        model: Optional[Union[Dict[str, str], ModelRef]] = None,
-        agent: Optional[str] = None,
-        tools: Optional[Dict[str, bool]] = None,
+        model: dict[str, str] | ModelRef | None = None,
+        agent: str | None = None,
+        tools: dict[str, bool] | None = None,
         no_reply: bool = False,
     ) -> MessageWithParts:
         """Send a message to a session (POST /session/{id}/message).
@@ -235,10 +237,10 @@ class Kilo:
         session_id: str,
         text: str,
         *,
-        files: Optional[List[FileAttachment]] = None,
-        agents: Optional[List[AgentAttachment]] = None,
-        model: Optional[Union[Dict[str, str], ModelRef]] = None,
-        agent: Optional[str] = None,
+        files: list[FileAttachment] | None = None,
+        agents: list[AgentAttachment] | None = None,
+        model: dict[str, str] | ModelRef | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
         """Send a prompt to a session and return the assistant's message.
 
@@ -248,10 +250,12 @@ class Kilo:
         and agent mentions.
         """
         text_part = MessagePartInput(type="text", text=text)
-        parts: List[MessagePartInput] = [text_part]
-        for f in (files or []):
-            parts.append(MessagePartInput(type="file", uri=f.uri, mime=f.mime, name=f.name or f.uri))
-        for a in (agents or []):
+        parts: list[MessagePartInput] = [text_part]
+        for f in files or []:
+            parts.append(
+                MessagePartInput(type="file", uri=f.uri, mime=f.mime, name=f.name or f.uri)
+            )
+        for a in agents or []:
             parts.append(MessagePartInput(type="agent", name=a.name))
         return await self.send_message(
             session_id,
@@ -265,10 +269,10 @@ class Kilo:
         session_id: str,
         text: str,
         *,
-        files: Optional[List[FileAttachment]] = None,
-        agents: Optional[List[AgentAttachment]] = None,
-        model: Optional[Union[Dict[str, str], ModelRef]] = None,
-        agent: Optional[str] = None,
+        files: list[FileAttachment] | None = None,
+        agents: list[AgentAttachment] | None = None,
+        model: dict[str, str] | ModelRef | None = None,
+        agent: str | None = None,
     ) -> None:
         """Send a prompt and return immediately (streaming-friendly).
 
@@ -277,10 +281,12 @@ class Kilo:
         :meth:`stream_session_events` / :meth:`wait_for_turn_end` to observe progress.
         """
         text_part = MessagePartInput(type="text", text=text)
-        parts: List[MessagePartInput] = [text_part]
-        for f in (files or []):
-            parts.append(MessagePartInput(type="file", uri=f.uri, mime=f.mime, name=f.name or f.uri))
-        for a in (agents or []):
+        parts: list[MessagePartInput] = [text_part]
+        for f in files or []:
+            parts.append(
+                MessagePartInput(type="file", uri=f.uri, mime=f.mime, name=f.name or f.uri)
+            )
+        for a in agents or []:
             parts.append(MessagePartInput(type="agent", name=a.name))
         model_ref = None
         if isinstance(model, dict):
@@ -288,7 +294,11 @@ class Kilo:
         elif model is not None:
             model_ref = model
         body = SendMessageInput(parts=parts, model=model_ref, agent=agent)
-        await self._request("POST", f"/session/{session_id}/prompt_async", json_body=body.model_dump(exclude_none=True))
+        await self._request(
+            "POST",
+            f"/session/{session_id}/prompt_async",
+            json_body=body.model_dump(exclude_none=True),
+        )
 
     async def interrupt(self, session_id: str) -> bool:
         """Interrupt an in-progress agent run (POST /session/{id}/abort)."""
@@ -304,11 +314,11 @@ class Kilo:
         command: str,
         arguments: str = "",
         *,
-        model: Optional[Dict[str, str]] = None,
-        agent: Optional[str] = None,
+        model: dict[str, str] | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
         """Run a slash command (POST /session/{id}/command)."""
-        body: Dict[str, Any] = {"command": command, "arguments": arguments}
+        body: dict[str, Any] = {"command": command, "arguments": arguments}
         if model:
             body["model"] = model
         if agent:
@@ -322,11 +332,11 @@ class Kilo:
         command: str,
         arguments: str = "",
         *,
-        model: Optional[Dict[str, str]] = None,
-        agent: Optional[str] = None,
+        model: dict[str, str] | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
         """Run a shell command through the session (POST /session/{id}/shell)."""
-        body: Dict[str, Any] = {"command": command, "arguments": arguments}
+        body: dict[str, Any] = {"command": command, "arguments": arguments}
         if model:
             body["model"] = model
         if agent:
@@ -336,9 +346,11 @@ class Kilo:
 
     # -- model / agent management ----------------------------------------------
 
-    async def change_model(self, session_id: str, provider_id: str, model_id: str, agent: Optional[str] = None) -> bool:
+    async def change_model(
+        self, session_id: str, provider_id: str, model_id: str, agent: str | None = None
+    ) -> bool:
         """Change the active model/agent for a session (via /session/{id}/init)."""
-        body: Dict[str, Any] = {
+        body: dict[str, Any] = {
             "providerID": provider_id,
             "modelID": model_id,
             "messageID": "",
@@ -348,7 +360,9 @@ class Kilo:
         raw = await self._request("POST", f"/session/{session_id}/init", json_body=body)
         return cast(bool, raw)
 
-    async def compact(self, session_id: str, provider_id: str, model_id: str, auto: bool = False) -> bool:
+    async def compact(
+        self, session_id: str, provider_id: str, model_id: str, auto: bool = False
+    ) -> bool:
         """Summarize/compact a session (POST /session/{id}/summarize)."""
         raw = await self._request(
             "POST",
@@ -363,12 +377,12 @@ class Kilo:
 
     # -- context / history -----------------------------------------------------
 
-    async def get_context(self, session_id: str) -> List[SessionMessage]:
+    async def get_context(self, session_id: str) -> list[SessionMessage]:
         """GET /api/session/{id}/context -- active context messages after last compaction."""
         data = await self._request("GET", f"/api/session/{session_id}/context")
         return [validate_session_message(item) for item in data]
 
-    async def list_sessions(self, **query: Any) -> List[SessionInfo]:
+    async def list_sessions(self, **query: Any) -> list[SessionInfo]:
         """GET /session -- list sessions (accepts scope/path/roots/start/search/limit)."""
         data = await self._request("GET", "/session", params=query)
         return [SessionInfo.model_validate(item) for item in data]
@@ -378,7 +392,13 @@ class Kilo:
         data = await self._request("GET", f"/session/{session_id}")
         return SessionInfo.model_validate(data)
 
-    async def create_session(self, *, title: Optional[str] = None, agent: Optional[str] = None, model: Optional[Dict[str, Any]] = None) -> SessionInfo:
+    async def create_session(
+        self,
+        *,
+        title: str | None = None,
+        agent: str | None = None,
+        model: dict[str, Any] | None = None,
+    ) -> SessionInfo:
         """POST /session -- create a new session."""
         model_ref = None
         if model is not None:
@@ -392,25 +412,20 @@ class Kilo:
         raw = await self._request("DELETE", f"/session/{session_id}")
         return cast(bool, raw)
 
-    async def fork_session(self, session_id: str, *, message_id: Optional[str] = None) -> SessionInfo:
+    async def fork_session(self, session_id: str, *, message_id: str | None = None) -> SessionInfo:
         """POST /session/{id}/fork -- fork at a specific message (or whole session)."""
-        body: Dict[str, Any] = {}
+        body: dict[str, Any] = {}
         if message_id:
             body["messageID"] = message_id
         data = await self._request("POST", f"/session/{session_id}/fork", json_body=body or None)
         return SessionInfo.model_validate(data)
 
-    # aliases
-    list = list_sessions
-    get = get_session
-    create = create_session
-    delete = delete_session
-    fork = fork_session
-
     async def rename_session(self, session_id: str, title: str) -> SessionInfo:
         """Rename a session (PATCH /session/{id})."""
         body = SessionUpdateInput(title=title)
-        data = await self._request("PATCH", f"/session/{session_id}", json_body=body.model_dump(exclude_none=True))
+        data = await self._request(
+            "PATCH", f"/session/{session_id}", json_body=body.model_dump(exclude_none=True)
+        )
         return SessionInfo.model_validate(data)
 
     async def archive_session(self, session_id: str) -> SessionInfo:
@@ -418,19 +433,23 @@ class Kilo:
         import time
 
         body = SessionUpdateInput(time={"archived": int(time.time() * 1000)})
-        data = await self._request("PATCH", f"/session/{session_id}", json_body=body.model_dump(exclude_none=True))
+        data = await self._request(
+            "PATCH", f"/session/{session_id}", json_body=body.model_dump(exclude_none=True)
+        )
         return SessionInfo.model_validate(data)
 
-    async def session_status(self) -> Dict[str, Dict[str, Any]]:
+    async def session_status(self) -> dict[str, dict[str, Any]]:
         """GET /session/status -- status of all sessions."""
         raw = await self._request("GET", "/session/status")
-        return cast(Dict[str, Dict[str, Any]], raw)
+        return cast(dict[str, dict[str, Any]], raw)
 
     # -- messages ---------------------------------------------------------------
 
-    async def list_messages(self, session_id: str, limit: Optional[int] = None) -> List[MessageWithParts]:
+    async def list_messages(
+        self, session_id: str, limit: int | None = None
+    ) -> list[MessageWithParts]:
         """GET /session/{id}/message -- session history."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if limit:
             params["limit"] = limit
         data = await self._request("GET", f"/session/{session_id}/message", params=params)
@@ -446,16 +465,18 @@ class Kilo:
         raw = await self._request("DELETE", f"/session/{session_id}/message/{message_id}")
         return cast(bool, raw)
 
-    async def get_todos(self, session_id: str) -> List[Todo]:
+    async def get_todos(self, session_id: str) -> list[Todo]:
         """GET /session/{id}/todo."""
         data = await self._request("GET", f"/session/{session_id}/todo")
         return [Todo.model_validate(item) for item in data]
 
     # -- reverts ----------------------------------------------------------------
 
-    async def revert(self, session_id: str, message_id: str, part_id: Optional[str] = None) -> SessionInfo:
+    async def revert(
+        self, session_id: str, message_id: str, part_id: str | None = None
+    ) -> SessionInfo:
         """Undo the effects of a message (POST /session/{id}/revert)."""
-        body: Dict[str, Any] = {"messageID": message_id}
+        body: dict[str, Any] = {"messageID": message_id}
         if part_id:
             body["partID"] = part_id
         data = await self._request("POST", f"/session/{session_id}/revert", json_body=body)
@@ -470,7 +491,9 @@ class Kilo:
 
     async def remove_skill(self, location: str) -> bool:
         """Remove a skill by its file location (POST /kilocode/skill/remove)."""
-        raw = await self._request("POST", "/kilocode/skill/remove", json_body={"location": location})
+        raw = await self._request(
+            "POST", "/kilocode/skill/remove", json_body={"location": location}
+        )
         return cast(bool, raw)
 
     async def remove_agent(self, name: str) -> bool:
@@ -480,7 +503,7 @@ class Kilo:
 
     # -- export / import -----------------------------------------------------------
 
-    async def export_session(self, session_id: str) -> Dict[str, Any]:
+    async def export_session(self, session_id: str) -> dict[str, Any]:
         """Export a session to a JSON document compatible with ``kilo export``.
 
         The server has no single-file bundle endpoint, so we reconstruct the document
@@ -499,20 +522,20 @@ class Kilo:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(doc, f, indent=2)
 
-    async def import_session(self, session: Dict[str, Any]) -> Dict[str, Any]:
+    async def import_session(self, session: dict[str, Any]) -> dict[str, Any]:
         """Import a session record (POST /kilocode/session-import/session)."""
         raw = await self._request("POST", "/kilocode/session-import/session", json_body=session)
-        return cast(Dict[str, Any], raw)
+        return cast(dict[str, Any], raw)
 
-    async def import_project(self, project: Dict[str, Any]) -> Dict[str, Any]:
+    async def import_project(self, project: dict[str, Any]) -> dict[str, Any]:
         """Import a project record (POST /kilocode/session-import/project)."""
         raw = await self._request("POST", "/kilocode/session-import/project", json_body=project)
-        return cast(Dict[str, Any], raw)
+        return cast(dict[str, Any], raw)
 
-    async def import_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+    async def import_message(self, message: dict[str, Any]) -> dict[str, Any]:
         """Import a message record (POST /kilocode/session-import/message)."""
         raw = await self._request("POST", "/kilocode/session-import/message", json_body=message)
-        return cast(Dict[str, Any], raw)
+        return cast(dict[str, Any], raw)
 
     # -- SSE streaming -------------------------------------------------------------
 
@@ -537,7 +560,7 @@ class Kilo:
     async def stream_session_log(
         self,
         session_id: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[KiloEvent]:
         """Subscribe to a session's event log, yielding only its events.
 
@@ -550,7 +573,7 @@ class Kilo:
     async def _stream(
         self,
         path: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[KiloEvent]:
         """Open an SSE stream using a streaming (non-buffering) httpx request."""
         request = self._http.build_request("GET", path, params=self._params(**(params or {})))
@@ -575,7 +598,7 @@ class Kilo:
         self,
         session_id: str,
         *,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> None:
         """Block until a session's agent loop reports ``session.turn.close``.
 
@@ -585,14 +608,18 @@ class Kilo:
         stream = await self.stream_session_events(session_id)
         try:
             if timeout is not None:
-                await asyncio.wait_for(self._consume_until_turn_close(stream, session_id), timeout=timeout)
+                await asyncio.wait_for(
+                    self._consume_until_turn_close(stream, session_id), timeout=timeout
+                )
             else:
                 await self._consume_until_turn_close(stream, session_id)
         finally:
             if hasattr(stream, "aclose") and asyncio.iscoroutinefunction(stream.aclose):
                 await stream.aclose()
 
-    async def _consume_until_turn_close(self, stream: AsyncIterator[KiloEvent], session_id: str) -> None:
+    async def _consume_until_turn_close(
+        self, stream: AsyncIterator[KiloEvent], session_id: str
+    ) -> None:
         async for event in stream:
             if event.is_turn_close and event.session_id == session_id:
                 return
@@ -609,7 +636,7 @@ class _FilteredEventStream:
         self._source = source
         self._session_id = session_id
 
-    def __aiter__(self) -> "_FilteredEventStream":
+    def __aiter__(self) -> _FilteredEventStream:
         return self
 
     async def __anext__(self) -> KiloEvent:
@@ -625,7 +652,7 @@ class _SessionApi:
     def __init__(self, client: Kilo) -> None:
         self._client = client
 
-    async def list(self, **query: Any) -> List[SessionInfo]:
+    async def list_sessions(self, **query: Any) -> list[SessionInfo]:
         return await self._client.list_sessions(**query)
 
     async def create(self, **kwargs: Any) -> SessionInfo:
@@ -646,19 +673,21 @@ class _SessionApi:
     async def archive(self, session_id: str) -> SessionInfo:
         return await self._client.archive_session(session_id)
 
-    async def status(self) -> Dict[str, Dict[str, Any]]:
+    async def status(self) -> dict[str, dict[str, Any]]:
         return await self._client.session_status()
 
-    async def messages(self, session_id: str, limit: Optional[int] = None) -> List[MessageWithParts]:
+    async def messages(self, session_id: str, limit: int | None = None) -> list[MessageWithParts]:
         return await self._client.list_messages(session_id, limit)
 
     async def message(self, session_id: str, message_id: str) -> MessageWithParts:
         return await self._client.get_message(session_id, message_id)
 
-    async def context(self, session_id: str) -> List[SessionMessage]:
+    async def context(self, session_id: str) -> list[SessionMessage]:
         return await self._client.get_context(session_id)
 
-    async def compact(self, session_id: str, provider_id: str, model_id: str, auto: bool = False) -> bool:
+    async def compact(
+        self, session_id: str, provider_id: str, model_id: str, auto: bool = False
+    ) -> bool:
         return await self._client.compact(session_id, provider_id, model_id, auto)
 
     async def revert(self, session_id: str, message_id: str, **kwargs: Any) -> SessionInfo:
@@ -667,7 +696,7 @@ class _SessionApi:
     async def unrevert(self, session_id: str) -> SessionInfo:
         return await self._client.unrevert(session_id)
 
-    async def todo(self, session_id: str) -> List[Todo]:
+    async def todo(self, session_id: str) -> list[Todo]:
         return await self._client.get_todos(session_id)
 
 
@@ -682,22 +711,24 @@ class _PermissionApi:
         request_id: str,
         response: str,
         *,
-        message: Optional[str] = None,
+        message: str | None = None,
     ) -> bool:
         """Reply to a permission request (POST /permission/{id}/reply).
 
         ``response`` is one of ``"once"`` (allow this time), ``"always"`` or
         ``"reject"``.
         """
-        body: Dict[str, Any] = {"reply": response}
+        body: dict[str, Any] = {"reply": response}
         if message:
             body["message"] = message
         raw = await self._client._request("POST", f"/permission/{request_id}/reply", json_body=body)
         return cast(bool, raw)
 
-    async def allow_everything(self, enable: bool, *, request_id: Optional[str] = None, session_id: Optional[str] = None) -> bool:
+    async def allow_everything(
+        self, enable: bool, *, request_id: str | None = None, session_id: str | None = None
+    ) -> bool:
         """Globally allow or deny all pending permission requests."""
-        body: Dict[str, Any] = {"enable": enable}
+        body: dict[str, Any] = {"enable": enable}
         if request_id:
             body["requestID"] = request_id
         if session_id:
@@ -705,10 +736,10 @@ class _PermissionApi:
         raw = await self._client._request("POST", "/permission/allow-everything", json_body=body)
         return cast(bool, raw)
 
-    async def list_pending(self) -> List[Dict[str, Any]]:
+    async def list_pending(self) -> list[dict[str, Any]]:
         """GET /permission -- the current pending permission requests."""
         raw = await self._client._request("GET", "/permission")
-        return cast(List[Dict[str, Any]], raw)
+        return cast(list[dict[str, Any]], raw)
 
 
 def credentials_from_env() -> Credentials:

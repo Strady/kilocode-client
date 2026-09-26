@@ -13,10 +13,10 @@ port from its state file (``~/.local/share/kilo/state.json``) and default to
 """
 
 import os
+from collections.abc import Iterator
 
-import pytest
 import httpx
-
+import pytest
 from kilocode_client import Kilo, SyncKilo
 
 SERVER_URL = os.environ.get(
@@ -43,7 +43,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def sync_client() -> "SyncKilo":
+def sync_client() -> Iterator[SyncKilo]:
     client = SyncKilo(base_url=SERVER_URL)
     yield client
     client.close()
@@ -97,9 +97,7 @@ class TestAsyncStream:
 
                 async def send() -> None:
                     await asyncio.sleep(0.2)
-                    await client.send_prompt_async(
-                        session.id, "Reply with the single word: banana"
-                    )
+                    await client.send_prompt_async(session.id, "Reply with the single word: banana")
 
                 sender = asyncio.create_task(send())
                 deltas: list[str] = []
@@ -171,7 +169,7 @@ class TestSessionLifecycle:
         session = sync_client.session.create(title="it-test")
         assert session.id
 
-        sessions = sync_client.session.list()
+        sessions = sync_client.session.list_sessions()
         ids = [s.id for s in sessions if hasattr(s, "id")]
         assert session.id in ids
 

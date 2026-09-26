@@ -1,35 +1,32 @@
 """Unit tests for the pydantic models (no server required)."""
 
 import pytest
-from pydantic import TypeAdapter, ValidationError
-
+from kilocode_client import (
+    BadRequestError,
+    EventStream,
+    KiloEvent,
+    NotFoundError,
+)
+from kilocode_client import (
+    client as client_mod,
+)
+from kilocode_client.events import is_text_delta, parse_events
+from kilocode_client.exceptions import KiloHTTPError
 from kilocode_client.models import (
     AgentAttachment,
     FileAttachment,
     MessagePartInput,
-    MessageWithParts,
     Part,
     Prompt,
     ReferenceAttachment,
     SendMessageInput,
     SessionCreateInput,
     SessionInfo,
-    SessionMessage,
-    ToolPart,
     TokenUsage,
+    ToolPart,
     validate_session_message,
 )
-
-from kilocode_client import (
-    BadRequestError,
-    Credentials,
-    EventStream,
-    KiloEvent,
-    NotFoundError,
-    client as client_mod,
-)
-from kilocode_client.events import parse_events, is_text_delta
-from kilocode_client.exceptions import KiloHTTPError
+from pydantic import TypeAdapter, ValidationError
 
 
 class TestSessionModels:
@@ -90,9 +87,7 @@ class TestParts:
     def test_part_rejects_unknown_type(self) -> None:
         adapter = TypeAdapter(Part)
         with pytest.raises(ValidationError):
-            adapter.validate_python(
-                {"id": "p", "sessionID": "s", "messageID": "m", "type": "nope"}
-            )
+            adapter.validate_python({"id": "p", "sessionID": "s", "messageID": "m", "type": "nope"})
 
 
 class TestSessionMessage:

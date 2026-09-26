@@ -12,8 +12,7 @@ Run against a live server, e.g.:
 
 import asyncio
 
-from kilocode_client import Kilo
-from kilocode_client import text_delta_of, tool_call_of
+from kilocode_client import Kilo, text_delta_of, tool_call_of
 
 
 async def main(base_url: str = "http://127.0.0.1:4096") -> None:
@@ -22,9 +21,7 @@ async def main(base_url: str = "http://127.0.0.1:4096") -> None:
 
     async def send() -> None:
         await asyncio.sleep(0.2)
-        await client.send_prompt_async(
-            session.id, "List three Python web frameworks, then stop."
-        )
+        await client.send_prompt_async(session.id, "List three Python web frameworks, then stop.")
 
     sender = asyncio.create_task(send())
 

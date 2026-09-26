@@ -20,12 +20,14 @@ pip install kilocode-client
 import asyncio
 from kilocode_client import Kilo
 
+
 async def main() -> None:
     client = Kilo(base_url="http://127.0.0.1:4096")  # auth from env
     session = await client.session.create(title="demo")
     msg = await client.send_prompt(session.id, "Explain the codebase in one line")
     print("message:", msg.info.id)
     await client.close()
+
 
 asyncio.run(main())
 ```
@@ -68,6 +70,7 @@ import asyncio
 from kilocode_client import Kilo
 from kilocode_client import text_delta_of, tool_call_of, permission_of
 
+
 async def main() -> None:
     client = Kilo()
     session = await client.session.create(title="stream")
@@ -88,6 +91,7 @@ async def main() -> None:
             break
     sender.cancel()
     await client.close()
+
 
 asyncio.run(main())
 ```
@@ -124,7 +128,7 @@ Every action you can do in the Kilo TUI maps to a method here:
 | TUI action | `kilocode-client` method |
 |---|---|
 | New session | `session.create(title=, agent=, model=)` |
-| List / open sessions | `session.list()`, `session.get(id)` |
+| List / open sessions | `session.list_sessions()` / `session.get(id)` |
 | Rename / archive session | `session.rename(id, title)` / `session.archive(id)` |
 | Delete session | `session.delete(id)` |
 | Fork session | `session.fork(id, message_id=)` |
@@ -169,8 +173,10 @@ messages are discriminated unions keyed off a `type`/`status` field.
 ```bash
 # set up
 uv sync --dev                     # or: uv pip install -e ".[dev]" --python .venv/bin/python
+# lint + format
+ruff check . && ruff format --check .
 # type-check
-python -m mypy kilocode_client
+ty check
 # tests (unit + integration against a live `kilo serve`)
 python -m pytest
 ```

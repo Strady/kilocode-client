@@ -11,7 +11,7 @@ enum `type`/`status` field, expressed with pydantic v2 ``Annotated`` tags.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union, cast
+from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -33,7 +33,7 @@ class SessionModelRef(_Base):
 
     id: str
     providerID: str
-    variant: Optional[str] = None
+    variant: str | None = None
 
 
 class ModelRef(_Base):
@@ -41,7 +41,7 @@ class ModelRef(_Base):
 
     providerID: str
     modelID: str
-    variant: Optional[str] = None
+    variant: str | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -50,10 +50,10 @@ class ModelRef(_Base):
 
 
 class TokenUsage(_Base):
-    input: Optional[int] = None
-    output: Optional[int] = None
-    reasoning: Optional[int] = None
-    cache: Optional[Dict[str, int]] = None
+    input: int | None = None
+    output: int | None = None
+    reasoning: int | None = None
+    cache: dict[str, int] | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -64,8 +64,8 @@ class TokenUsage(_Base):
 class TimeInfo(_Base):
     created: int = 0
     updated: int = 0
-    compacting: Optional[int] = None
-    archived: Optional[float] = None
+    compacting: int | None = None
+    archived: float | None = None
 
 
 class ShareInfo(_Base):
@@ -76,28 +76,28 @@ class SummaryInfo(_Base):
     additions: int = 0
     deletions: int = 0
     files: int = 0
-    diffs: List[Dict[str, Any]] = Field(default_factory=list)
+    diffs: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SessionInfo(_Base):
     """A Kilo session (as returned by /session)."""
 
     id: str
-    slug: Optional[str] = None
+    slug: str | None = None
     projectID: str
-    workspaceID: Optional[str] = None
-    directory: Optional[str] = None
-    path: Optional[str] = None
-    parentID: Optional[str] = None
+    workspaceID: str | None = None
+    directory: str | None = None
+    path: str | None = None
+    parentID: str | None = None
     title: str
-    agent: Optional[str] = None
-    model: Optional[SessionModelRef] = None
-    version: Optional[str] = None
+    agent: str | None = None
+    model: SessionModelRef | None = None
+    version: str | None = None
     time: TimeInfo = Field(default_factory=TimeInfo)
     cost: float = 0.0
-    tokens: Optional[TokenUsage] = None
-    summary: Optional[SummaryInfo] = None
-    share: Optional[ShareInfo] = None
+    tokens: TokenUsage | None = None
+    summary: SummaryInfo | None = None
+    share: ShareInfo | None = None
     permission: Any = None
     revert: Any = None
 
@@ -105,21 +105,21 @@ class SessionInfo(_Base):
 class SessionCreateInput(_Base):
     """Request body for POST /session."""
 
-    parentID: Optional[str] = None
-    title: Optional[str] = None
-    agent: Optional[str] = None
-    model: Optional[SessionModelRef] = None
+    parentID: str | None = None
+    title: str | None = None
+    agent: str | None = None
+    model: SessionModelRef | None = None
     permission: Any = None
-    platform: Optional[str] = None
-    workspaceID: Optional[str] = None
+    platform: str | None = None
+    workspaceID: str | None = None
 
 
 class SessionUpdateInput(_Base):
     """Request body for PATCH /session/{id} (rename / archive)."""
 
-    title: Optional[str] = None
+    title: str | None = None
     permission: Any = None
-    time: Optional[Dict[str, Optional[int]]] = None
+    time: dict[str, int | None] | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -129,7 +129,7 @@ class SessionUpdateInput(_Base):
 
 class TimeRange(_Base):
     start: int = 0
-    end: Optional[int] = None
+    end: int | None = None
 
 
 class TextPart(_Base):
@@ -138,10 +138,10 @@ class TextPart(_Base):
     messageID: str
     type: Literal["text"] = "text"
     text: str
-    synthetic: Optional[bool] = None
-    ignored: Optional[bool] = None
-    time: Optional[TimeRange] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    synthetic: bool | None = None
+    ignored: bool | None = None
+    time: TimeRange | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReasoningPart(_Base):
@@ -150,49 +150,49 @@ class ReasoningPart(_Base):
     messageID: str
     type: Literal["reasoning"] = "reasoning"
     text: str
-    time: Optional[TimeRange] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    time: TimeRange | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ToolTime(_Base):
     start: int = 0
-    end: Optional[int] = None
-    compacted: Optional[int] = None
+    end: int | None = None
+    compacted: int | None = None
 
 
 class ToolStatePending(_Base):
     status: Literal["pending"] = "pending"
-    input: Dict[str, Any] = Field(default_factory=dict)
-    title: Optional[str] = None
+    input: dict[str, Any] = Field(default_factory=dict)
+    title: str | None = None
 
 
 class ToolStateRunning(_Base):
     status: Literal["running"] = "running"
-    input: Dict[str, Any] = Field(default_factory=dict)
-    title: Optional[str] = None
+    input: dict[str, Any] = Field(default_factory=dict)
+    title: str | None = None
     time: ToolTime = Field(default_factory=ToolTime)
 
 
 class ToolStateCompleted(_Base):
     status: Literal["completed"] = "completed"
-    input: Dict[str, Any] = Field(default_factory=dict)
+    input: dict[str, Any] = Field(default_factory=dict)
     output: str = ""
     title: str = ""
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     time: ToolTime = Field(default_factory=ToolTime)
-    attachments: List[Any] = Field(default_factory=list)
+    attachments: list[Any] = Field(default_factory=list)
 
 
 class ToolStateError(_Base):
     status: Literal["error"] = "error"
-    input: Dict[str, Any] = Field(default_factory=dict)
+    input: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     time: ToolTime = Field(default_factory=ToolTime)
 
 
 ToolState = Annotated[
-    Union[ToolStatePending, ToolStateRunning, ToolStateCompleted, ToolStateError],
+    ToolStatePending | ToolStateRunning | ToolStateCompleted | ToolStateError,
     Field(discriminator="status"),
 ]
 
@@ -205,7 +205,7 @@ class ToolPart(_Base):
     callID: str
     tool: str
     state: ToolState
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class FilePart(_Base):
@@ -214,9 +214,9 @@ class FilePart(_Base):
     messageID: str
     type: Literal["file"] = "file"
     mime: str = ""
-    filename: Optional[str] = None
+    filename: str | None = None
     url: str = ""
-    source: Optional[Dict[str, Any]] = None
+    source: dict[str, Any] | None = None
 
 
 class StepStartPart(_Base):
@@ -224,7 +224,7 @@ class StepStartPart(_Base):
     sessionID: str
     messageID: str
     type: Literal["step-start"] = "step-start"
-    step: Optional[str] = None
+    step: str | None = None
 
 
 class StepFinishPart(_Base):
@@ -232,7 +232,7 @@ class StepFinishPart(_Base):
     sessionID: str
     messageID: str
     type: Literal["step-finish"] = "step-finish"
-    step: Optional[str] = None
+    step: str | None = None
 
 
 class AgentPart(_Base):
@@ -248,7 +248,7 @@ class RetryPart(_Base):
     sessionID: str
     messageID: str
     type: Literal["retry"] = "retry"
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class CompactionPart(_Base):
@@ -264,7 +264,7 @@ class SnapshotPart(_Base):
     sessionID: str
     messageID: str
     type: Literal["snapshot"] = "snapshot"
-    snapshot: Optional[str] = None
+    snapshot: str | None = None
 
 
 class PatchPart(_Base):
@@ -282,20 +282,18 @@ class SubtaskPart(_Base):
 
 
 Part = Annotated[
-    Union[
-        TextPart,
-        ReasoningPart,
-        ToolPart,
-        FilePart,
-        StepStartPart,
-        StepFinishPart,
-        AgentPart,
-        RetryPart,
-        CompactionPart,
-        SnapshotPart,
-        PatchPart,
-        SubtaskPart,
-    ],
+    TextPart
+    | ReasoningPart
+    | ToolPart
+    | FilePart
+    | StepStartPart
+    | StepFinishPart
+    | AgentPart
+    | RetryPart
+    | CompactionPart
+    | SnapshotPart
+    | PatchPart
+    | SubtaskPart,
     Field(discriminator="type"),
 ]
 
@@ -306,16 +304,16 @@ class Message(_Base):
     id: str
     sessionID: str
     role: str
-    time: Dict[str, int] = Field(default_factory=dict)
+    time: dict[str, int] = Field(default_factory=dict)
     error: Any = None
-    parts: List[Part] = Field(default_factory=list)
+    parts: list[Part] = Field(default_factory=list)
 
 
 class MessageWithParts(_Base):
     """Message info + parts (the element shape of GET /session/{id}/message)."""
 
     info: Message
-    parts: List[Part] = Field(default_factory=list)
+    parts: list[Part] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -326,67 +324,67 @@ class MessageWithParts(_Base):
 class PromptSource(_Base):
     start: float = 0
     end: float = 0
-    text: Optional[str] = None
+    text: str | None = None
 
 
 class FileAttachment(_Base):
     uri: str
     mime: str = ""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    source: Optional[PromptSource] = None
+    name: str | None = None
+    description: str | None = None
+    source: PromptSource | None = None
 
 
 class AgentAttachment(_Base):
     name: str
-    source: Optional[PromptSource] = None
+    source: PromptSource | None = None
 
 
 class ReferenceAttachment(_Base):
     name: str
     kind: Literal["local", "git", "invalid"] = "local"
-    uri: Optional[str] = None
-    repository: Optional[str] = None
-    branch: Optional[str] = None
-    target: Optional[str] = None
-    targetUri: Optional[str] = None
-    problem: Optional[str] = None
+    uri: str | None = None
+    repository: str | None = None
+    branch: str | None = None
+    target: str | None = None
+    targetUri: str | None = None
+    problem: str | None = None
 
 
 class Prompt(_Base):
     """The structured prompt payload for sending a message."""
 
     text: str
-    files: List[FileAttachment] = Field(default_factory=list)
-    agents: List[AgentAttachment] = Field(default_factory=list)
-    references: List[ReferenceAttachment] = Field(default_factory=list)
+    files: list[FileAttachment] = Field(default_factory=list)
+    agents: list[AgentAttachment] = Field(default_factory=list)
+    references: list[ReferenceAttachment] = Field(default_factory=list)
 
 
 class MessagePartInput(_Base):
     """A single part in a message send request (inline object, no id/session)."""
 
     type: str
-    text: Optional[str] = None
-    uri: Optional[str] = None
-    mime: Optional[str] = None
-    name: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
+    text: str | None = None
+    uri: str | None = None
+    mime: str | None = None
+    name: str | None = None
+    start: int | None = None
+    end: int | None = None
 
 
 class SendMessageInput(_Base):
     """Request body for POST /session/{id}/message, /command and /shell."""
 
-    parts: List[MessagePartInput] = Field(default_factory=list)
-    messageID: Optional[str] = None
-    model: Optional[ModelRef] = None
-    agent: Optional[str] = None
-    noReply: Optional[bool] = None
-    tools: Optional[Dict[str, bool]] = None
+    parts: list[MessagePartInput] = Field(default_factory=list)
+    messageID: str | None = None
+    model: ModelRef | None = None
+    agent: str | None = None
+    noReply: bool | None = None
+    tools: dict[str, bool] | None = None
     format: Any = None
-    system: Optional[str] = None
-    variant: Optional[str] = None
-    editorContext: Optional[Dict[str, Any]] = None
+    system: str | None = None
+    variant: str | None = None
+    editorContext: dict[str, Any] | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -397,39 +395,39 @@ class SendMessageInput(_Base):
 class SessionMessageUser(_Base):
     type: Literal["user"] = "user"
     id: str
-    time: Dict[str, int] = Field(default_factory=dict)
+    time: dict[str, int] = Field(default_factory=dict)
     text: str
-    files: List[FileAttachment] = Field(default_factory=list)
-    agents: List[AgentAttachment] = Field(default_factory=list)
-    references: List[ReferenceAttachment] = Field(default_factory=list)
+    files: list[FileAttachment] = Field(default_factory=list)
+    agents: list[AgentAttachment] = Field(default_factory=list)
+    references: list[ReferenceAttachment] = Field(default_factory=list)
 
 
 class SessionMessageAssistant(_Base):
     type: Literal["assistant"] = "assistant"
     id: str
-    time: Dict[str, int] = Field(default_factory=dict)
-    agent: Optional[str] = None
-    model: Optional[SessionModelRef] = None
-    content: List[Any] = Field(default_factory=list)
-    snapshot: Optional[Dict[str, str]] = None
-    finish: Optional[str] = None
-    cost: Optional[float] = None
-    tokens: Optional[TokenUsage] = None
+    time: dict[str, int] = Field(default_factory=dict)
+    agent: str | None = None
+    model: SessionModelRef | None = None
+    content: list[Any] = Field(default_factory=list)
+    snapshot: dict[str, str] | None = None
+    finish: str | None = None
+    cost: float | None = None
+    tokens: TokenUsage | None = None
 
 
 class SessionMessageSynthetic(_Base):
     type: Literal["synthetic"] = "synthetic"
     id: str
     sessionID: str
-    time: Dict[str, int] = Field(default_factory=dict)
+    time: dict[str, int] = Field(default_factory=dict)
     text: str = ""
 
 
 class SessionMessageShell(_Base):
     type: Literal["shell"] = "shell"
     id: str
-    time: Dict[str, int] = Field(default_factory=dict)
-    parts: List[Any] = Field(default_factory=list)
+    time: dict[str, int] = Field(default_factory=dict)
+    parts: list[Any] = Field(default_factory=list)
 
 
 class SessionMessageCompaction(_Base):
@@ -437,8 +435,8 @@ class SessionMessageCompaction(_Base):
     id: str
     reason: Literal["auto", "manual"] = "auto"
     summary: str = ""
-    include: Optional[str] = None
-    time: Dict[str, int] = Field(default_factory=dict)
+    include: str | None = None
+    time: dict[str, int] = Field(default_factory=dict)
 
 
 class SessionMessageAgentSwitched(_Base):
@@ -454,22 +452,20 @@ class SessionMessageModelSwitched(_Base):
 
 
 SessionMessage = Annotated[
-    Union[
-        SessionMessageUser,
-        SessionMessageAssistant,
-        SessionMessageSynthetic,
-        SessionMessageShell,
-        SessionMessageCompaction,
-        SessionMessageAgentSwitched,
-        SessionMessageModelSwitched,
-    ],
+    SessionMessageUser
+    | SessionMessageAssistant
+    | SessionMessageSynthetic
+    | SessionMessageShell
+    | SessionMessageCompaction
+    | SessionMessageAgentSwitched
+    | SessionMessageModelSwitched,
     Field(discriminator="type"),
 ]
 
 
 class V2SessionListResponse(_Base):
-    items: List[SessionInfo] = Field(default_factory=list)
-    cursor: Optional[Dict[str, Optional[str]]] = None
+    items: list[SessionInfo] = Field(default_factory=list)
+    cursor: dict[str, str | None] | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -482,12 +478,12 @@ class Todo(_Base):
     sessionID: str
     content: str
     status: str
-    time: Dict[str, int] = Field(default_factory=dict)
+    time: dict[str, int] = Field(default_factory=dict)
 
 
 class SessionError(_Base):
     name: str
-    data: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def message(self) -> str:

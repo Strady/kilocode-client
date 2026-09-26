@@ -11,13 +11,12 @@ from __future__ import annotations
 import base64
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class Credentials:
-    username: Optional[str]
-    password: Optional[str]
+    username: str | None
+    password: str | None
 
     @property
     def enabled(self) -> bool:
@@ -25,12 +24,12 @@ class Credentials:
         return bool(self.password)
 
     @property
-    def header_value(self) -> Optional[str]:
+    def header_value(self) -> str | None:
         """Value for the ``Authorization`` header, or ``None`` when auth is off."""
         if not self.enabled:
             return None
         user = self.username or "kilo"
-        token = base64.b64encode(f"{user}:{self.password}".encode("utf-8")).decode("ascii")
+        token = base64.b64encode(f"{user}:{self.password}".encode()).decode("ascii")
         return f"Basic {token}"
 
 
@@ -52,9 +51,9 @@ def credentials_from_env(
 
 
 def make_headers(
-    username: Optional[str] = None,
-    password: Optional[str] = None,
-    base: Optional[dict[str, str]] = None,
+    username: str | None = None,
+    password: str | None = None,
+    base: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Build request headers, conditionally including Basic Auth.
 
