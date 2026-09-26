@@ -184,6 +184,18 @@ python -m pytest
 Integration tests are skipped when no `KILO_SERVER_URL` / running `kilo serve` is
 available — see `tests/`.
 
+## Documentation
+
+Docstrings are written in reStructuredText and rendered with Sphinx (autodoc).
+Build the docs with:
+
+```bash
+uv pip install -e ".[docs]" -p .venv
+cd docs && sphinx-build -b html . _build/html
+```
+
+The generated HTML lands in `docs/_build/html/index.html`.
+
 ## License
 
 MIT

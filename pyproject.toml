@@ -29,6 +29,11 @@ dev = [
     "ruff>=0.5",
     "ty>=0.0.1",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "furo",
+]
 
 [tool.setuptools.packages.find]
 include = ["kilocode_client*"]

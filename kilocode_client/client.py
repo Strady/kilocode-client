@@ -53,17 +53,17 @@ from .models import (
 class Kilo:
     """Async client for a running Kilo server.
 
-    Args:
-        base_url: Root of the server, e.g. ``http://127.0.0.1:4096``.
-        username/password: Basic-auth credentials. Defaults to
-            ``KILO_SERVER_USERNAME`` / ``KILO_SERVER_PASSWORD`` from the environment.
-        directory: Project directory the session belongs to. Passed as the ``directory``
-            query param on every request; most useful when the server manages multiple
-            projects. Injects the ``x-kilo-directory`` header like the official SDK.
-        timeout: Request timeout in seconds, or an ``httpx.Timeout``.
-        retries: Number of retries for transient failures (connect/5xx).
-        headers: Extra headers merged into every request.
-        follow_redirects: Passed to ``httpx.AsyncClient``.
+    :param base_url: Root of the server, e.g. ``http://127.0.0.1:4096``.
+    :param username: Basic-auth username (defaults to ``KILO_SERVER_USERNAME``).
+    :param password: Basic-auth password (defaults to ``KILO_SERVER_PASSWORD``).
+    :param directory: Project directory the session belongs to. Passed as the
+        ``directory`` query param on every request; most useful when the server
+        manages multiple projects. Injects the ``x-kilo-directory`` header like the
+        official SDK.
+    :param timeout: Request timeout in seconds, or an ``httpx.Timeout``.
+    :param retries: Number of retries for transient failures (connect/5xx).
+    :param headers: Extra headers merged into every request.
+    :param follow_redirects: Passed to ``httpx.AsyncClient``.
     """
 
     def __init__(

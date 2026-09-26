@@ -28,11 +28,12 @@ from typing import Any
 class KiloEvent:
     """A single parsed SSE event.
 
-    Attributes:
-        type: The event's discriminant (e.g. ``session.next.text.delta``).
-        id: Server-assigned event id (string), if present.
-        properties: The raw ``properties`` payload dict.
-        directory/project/workspace: Routing metadata, set only for global-stream events.
+    :ivar type: The event's discriminant (e.g. ``session.next.text.delta``).
+    :ivar id: Server-assigned event id (string), if present.
+    :ivar properties: The raw ``properties`` payload dict.
+    :ivar directory: Routing metadata, set only for global-stream events.
+    :ivar project: Routing metadata, set only for global-stream events.
+    :ivar workspace: Routing metadata, set only for global-stream events.
     """
 
     type: str
