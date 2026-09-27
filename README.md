@@ -177,6 +177,21 @@ Every action you can do in the Kilo TUI maps to a method here:
 The async API uses `await`; add the same method names on `SyncKilo` for blocking
 calls (e.g. `SyncKilo().session.create(...)`).
 
+## Export / Import
+
+- **`export_session(id)` / `export_session_to_file(id, path)`** are a **client-side
+  reconstruction**, not a call to a single server-side export endpoint. They assemble
+  the document locally from `get_session(id)` plus `list_messages(id)`, mirroring what
+  `kilo export` does. Because the format is rebuilt from the current message/session
+  schema, it is **not** guaranteed to match a given server version's `kilo export`
+  output exactly — if the server changes its internal message/session format, the
+  exported document can drift from the CLI's. If you need guaranteed compatibility
+  with `kilo export`, verify against the server version you target.
+- **`import_session(doc)` / `import_project(doc)` / `import_message(doc)`** are the
+  opposite: they are **native server functionality** that proxies straight to the
+  server's `/kilocode/session-import/*` endpoints. The import is not a client-side
+  reconstruction, so do not assume the export/import paths are symmetric.
+
 ## Models
 
 Request/response payloads are validated with pydantic v2 models derived from the

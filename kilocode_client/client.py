@@ -525,8 +525,12 @@ class Kilo:
     async def export_session(self, session_id: str) -> dict[str, Any]:
         """Export a session to a JSON document compatible with ``kilo export``.
 
-        The server has no single-file bundle endpoint, so we reconstruct the document
-        the way ``kilo export`` does: session metadata + all messages.
+        This is a *client-side reconstruction*: the server has no single-file bundle
+        endpoint, so we assemble the document from :meth:`get_session` plus
+        :meth:`list_messages`, mirroring what ``kilo export`` does. Because the
+        format is rebuilt from the current message/session schema, it is **not**
+        guaranteed to match a given server version's ``kilo export`` output exactly.
+        See "Export / Import" in the README.
         """
         session = await self.get_session(session_id)
         messages = await self.list_messages(session_id)
