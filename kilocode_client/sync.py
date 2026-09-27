@@ -28,8 +28,11 @@ from typing import Any, TypeVar
 from .client import Kilo
 from .events import KiloEvent
 from .models import (
+    AgentAttachment,
+    FileAttachment,
     MessagePartInput,
     MessageWithParts,
+    ModelRef,
     SessionInfo,
     SessionMessage,
     Todo,
@@ -156,7 +159,7 @@ class SyncKilo:
         parts: list[MessagePartInput] | None = None,
         message: str | None = None,
         text: str = "",
-        model: dict[str, str] | None = None,
+        model: dict[str, str] | ModelRef | None = None,
         agent: str | None = None,
         tools: dict[str, bool] | None = None,
         no_reply: bool = False,
@@ -178,12 +181,43 @@ class SyncKilo:
         self,
         session_id: str,
         text: str,
-        **kwargs: Any,
+        *,
+        files: list[FileAttachment] | None = None,
+        agents: list[AgentAttachment] | None = None,
+        model: dict[str, str] | ModelRef | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
-        return self._run(self._async.send_prompt(session_id, text, **kwargs))
+        return self._run(
+            self._async.send_prompt(
+                session_id,
+                text,
+                files=files,
+                agents=agents,
+                model=model,
+                agent=agent,
+            )
+        )
 
-    def send_prompt_async(self, session_id: str, text: str, **kwargs: Any) -> None:
-        return self._run(self._async.send_prompt_async(session_id, text, **kwargs))
+    def send_prompt_async(
+        self,
+        session_id: str,
+        text: str,
+        *,
+        files: list[FileAttachment] | None = None,
+        agents: list[AgentAttachment] | None = None,
+        model: dict[str, str] | ModelRef | None = None,
+        agent: str | None = None,
+    ) -> None:
+        self._run(
+            self._async.send_prompt_async(
+                session_id,
+                text,
+                files=files,
+                agents=agents,
+                model=model,
+                agent=agent,
+            )
+        )
 
     def interrupt(self, session_id: str) -> bool:
         return self._run(self._async.interrupt(session_id))
@@ -195,18 +229,38 @@ class SyncKilo:
         session_id: str,
         command: str,
         arguments: str = "",
-        **kwargs: Any,
+        *,
+        model: dict[str, str] | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
-        return self._run(self._async.run_command(session_id, command, arguments, **kwargs))
+        return self._run(
+            self._async.run_command(
+                session_id,
+                command,
+                arguments,
+                model=model,
+                agent=agent,
+            )
+        )
 
     def run_shell(
         self,
         session_id: str,
         command: str,
         arguments: str = "",
-        **kwargs: Any,
+        *,
+        model: dict[str, str] | None = None,
+        agent: str | None = None,
     ) -> MessageWithParts:
-        return self._run(self._async.run_shell(session_id, command, arguments, **kwargs))
+        return self._run(
+            self._async.run_shell(
+                session_id,
+                command,
+                arguments,
+                model=model,
+                agent=agent,
+            )
+        )
 
     def change_model(
         self, session_id: str, provider_id: str, model_id: str, agent: str | None = None
@@ -228,14 +282,20 @@ class SyncKilo:
     def get_session(self, session_id: str) -> SessionInfo:
         return self._run(self._async.get_session(session_id))
 
-    def create_session(self, **kwargs: Any) -> SessionInfo:
-        return self._run(self._async.create_session(**kwargs))
+    def create_session(
+        self,
+        *,
+        title: str | None = None,
+        agent: str | None = None,
+        model: dict[str, Any] | None = None,
+    ) -> SessionInfo:
+        return self._run(self._async.create_session(title=title, agent=agent, model=model))
 
     def delete_session(self, session_id: str) -> bool:
         return self._run(self._async.delete_session(session_id))
 
-    def fork_session(self, session_id: str, **kwargs: Any) -> SessionInfo:
-        return self._run(self._async.fork_session(session_id, **kwargs))
+    def fork_session(self, session_id: str, *, message_id: str | None = None) -> SessionInfo:
+        return self._run(self._async.fork_session(session_id, message_id=message_id))
 
     def rename_session(self, session_id: str, title: str) -> SessionInfo:
         return self._run(self._async.rename_session(session_id, title))
@@ -258,8 +318,8 @@ class SyncKilo:
     def get_todos(self, session_id: str) -> list[Todo]:
         return self._run(self._async.get_todos(session_id))
 
-    def revert(self, session_id: str, message_id: str, **kwargs: Any) -> SessionInfo:
-        return self._run(self._async.revert(session_id, message_id, **kwargs))
+    def revert(self, session_id: str, message_id: str, part_id: str | None = None) -> SessionInfo:
+        return self._run(self._async.revert(session_id, message_id, part_id))
 
     def unrevert(self, session_id: str) -> SessionInfo:
         return self._run(self._async.unrevert(session_id))
@@ -432,11 +492,27 @@ class _SyncPermissionApi:
     def __init__(self, wrap: SyncKilo) -> None:
         self._w = wrap
 
-    def reply(self, request_id: str, response: str, **kwargs: Any) -> bool:
-        return self._w._run(self._w._async.permission.reply(request_id, response, **kwargs))
+    def reply(
+        self,
+        request_id: str,
+        response: str,
+        *,
+        message: str | None = None,
+    ) -> bool:
+        return self._w._run(self._w._async.permission.reply(request_id, response, message=message))
 
-    def allow_everything(self, enable: bool, **kwargs: Any) -> bool:
-        return self._w._run(self._w._async.permission.allow_everything(enable, **kwargs))
+    def allow_everything(
+        self,
+        enable: bool,
+        *,
+        request_id: str | None = None,
+        session_id: str | None = None,
+    ) -> bool:
+        return self._w._run(
+            self._w._async.permission.allow_everything(
+                enable, request_id=request_id, session_id=session_id
+            )
+        )
 
     def list_pending(self) -> list[dict[str, Any]]:
         return self._w._run(self._w._async.permission.list_pending())
