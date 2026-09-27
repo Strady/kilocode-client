@@ -545,13 +545,19 @@ class Kilo:
         *,
         instance: bool = False,
     ) -> AsyncIterator[KiloEvent]:
-        """Subscribe to events, filtered (by the server) to a session.
+        """Subscribe to a session's live events, yielding only its events.
 
-        Uses the instance-wide ``/event`` stream; events carry ``sessionID`` in their
-        ``properties``. Pass ``instance=True`` to stream all events regardless of
-        session. Returns an async iterator you can consume with ``async for``.
+        Opens the instance-wide ``/event`` stream. Because the server does not filter
+        this stream per session, events are filtered *client-side* by ``sessionID``
+        (the events carry it in their ``properties``); events from other sessions are
+        skipped. Pass ``instance=True`` to bypass filtering and yield every event on
+        the instance stream regardless of session. Returns an async iterator you can
+        consume with ``async for``.
         """
-        return await self._stream("/event")
+        base = await self._stream("/event")
+        if instance:
+            return base
+        return _FilteredEventStream(base, session_id=session_id)
 
     async def stream_global_events(self) -> AsyncIterator[KiloEvent]:
         """Subscribe to the global cross-project event stream (GET /global/event)."""
