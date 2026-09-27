@@ -140,12 +140,18 @@ class Kilo:
         parse: bool = True,
     ) -> Any:
         """Perform a request and return parsed data (or a pydantic model)."""
+        params = self._params(**(params or {}))
+        headers = None
+        call_directory = params.get("directory")
+        if call_directory is not None and call_directory != self.directory:
+            headers = {"x-kilo-directory": base64.b64encode(str(call_directory).encode()).decode()}
         response = await self._http.request(
             method,
             path,
-            params=self._params(**(params or {})),
+            params=params,
             json=json_body if json_body is not None else None,
             content=content,
+            headers=headers,
         )
         if response.status_code >= 400:
             raise_for_response(response)
@@ -166,13 +172,26 @@ class Kilo:
         return cast(dict[str, Any], raw)
 
     async def list_providers(self, directory: str | None = None) -> list[dict[str, Any]]:
-        """GET /provider -- configured providers (use ``directory`` to scope)."""
+        """GET /provider -- configured providers (use ``directory`` to scope).
+
+        A ``directory`` passed to :meth:`Kilo.__init__` is sent as the ``directory``
+        query param on every request *and* sets the ``x-kilo-directory`` header (base64)
+        client-wide. A ``directory`` passed here is applied to *this request only*: it
+        becomes the ``directory`` query param and, when it differs from the client-level
+        directory, also overrides the ``x-kilo-directory`` header for just this request.
+        """
         params = {"directory": directory} if directory else {}
         raw = await self._request("GET", "/provider", params=params)
         return cast(list[dict[str, Any]], raw)
 
     async def list_models(self, directory: str | None = None) -> list[dict[str, Any]]:
-        """GET /api/model -- available models."""
+        """GET /api/model -- available models.
+
+        Same ``directory`` semantics as :meth:`list_providers`: the client-level
+        value (if any) is applied to every request, while a value passed here applies
+        only to this call (and overrides the ``x-kilo-directory`` header for it when
+        it differs).
+        """
         params = {"directory": directory} if directory else {}
         raw = await self._request("GET", "/api/model", params=params)
         return cast(list[dict[str, Any]], raw)

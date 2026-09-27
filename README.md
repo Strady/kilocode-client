@@ -59,6 +59,21 @@ The daemon (`kilo daemon start`) uses username `kilo` / password `kilo` and serv
 on `http://127.0.0.1:PORT` (ports 4097–4116); its current port is in the daemon
 state file.
 
+### Project directory (multi-project)
+
+When the server manages several projects you can target one with the `directory`
+argument. It is handled at two levels:
+
+- **Client level**: `Kilo(directory="/path")` / `SyncKilo(directory="/path")`. The
+  value is sent as the `directory` query param on **every** request and also sets
+  the `x-kilo-directory` header (base64) client-wide.
+- **Per-call level**: methods that accept a `directory` kwarg, such as
+  `list_providers(directory=...)` and `list_models(directory=...)`. The value is
+  applied to **that request only**: it becomes the `directory` query param and,
+  when it differs from the client-level directory, also overrides the
+  `x-kilo-directory` header for just that call. It never changes the header pinned
+  at the client level.
+
 ## Streaming
 
 Subscribe to a session's event stream and iterate typed events. To observe text
