@@ -16,7 +16,9 @@ async def main(base_url: str = "http://127.0.0.1:4096") -> None:
     client = Kilo(base_url=base_url)
     session = await client.session.create(title="shell-example")
 
-    shell = await client.run_shell(session.id, "/bin/echo", "hello from kilocode-client")
+    shell = await client.run_shell(
+        session.id, "/bin/echo", "hello from kilocode-client", agent="build"
+    )
     print("shell ack:", shell.info.role)
 
     # Start a long-running turn asynchronously, then interrupt it in flight.

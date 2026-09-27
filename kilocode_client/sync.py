@@ -250,7 +250,7 @@ class SyncKilo:
         arguments: str = "",
         *,
         model: dict[str, str] | None = None,
-        agent: str | None = None,
+        agent: str,
     ) -> MessageWithParts:
         return self._run(
             self._async.run_shell(

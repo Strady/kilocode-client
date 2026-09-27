@@ -352,14 +352,18 @@ class Kilo:
         arguments: str = "",
         *,
         model: dict[str, str] | None = None,
-        agent: str | None = None,
+        agent: str,
     ) -> MessageWithParts:
-        """Run a shell command through the session (POST /session/{id}/shell)."""
-        body: dict[str, Any] = {"command": command, "arguments": arguments}
+        """Run a shell command through the session (POST /session/{id}/shell).
+
+        The shell input takes the full command as a single ``command`` string and
+        requires an ``agent``; ``arguments`` are folded into ``command``.
+        """
+        full = f"{command} {arguments}".strip()
+        body: dict[str, Any] = {"command": full}
         if model:
             body["model"] = model
-        if agent:
-            body["agent"] = agent
+        body["agent"] = agent
         data = await self._request("POST", f"/session/{session_id}/shell", json_body=body)
         return MessageWithParts.model_validate(data)
 
